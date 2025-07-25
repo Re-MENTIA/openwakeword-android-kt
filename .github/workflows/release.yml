@@ -60,11 +60,15 @@ jobs:
         REPO_PATH="$HOME/.m2/repository/xyz/rementia/openwakeword/$VERSION"
         cd "$REPO_PATH"
         
-        # Generate checksums
+        # Generate checksums and signatures for all artifacts
         for file in *.jar *.aar *.pom *.module; do
           if [ -f "$file" ]; then
             md5sum "$file" | awk '{print $1}' > "$file.md5"
             sha1sum "$file" | awk '{print $1}' > "$file.sha1"
+            # Sign all artifacts if signature doesn't exist
+            if [ ! -f "$file.asc" ]; then
+              gpg --armor --detach-sign --pinentry-mode loopback "$file"
+            fi
           fi
         done
         

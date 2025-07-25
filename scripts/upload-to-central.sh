@@ -1,7 +1,7 @@
 #!/bin/bash
 # Upload script for Central Portal
 
-VERSION="${1:-0.1.2}"
+VERSION="${1:-0.1.3}"
 BUNDLE="$HOME/openwakeword-$VERSION-bundle.zip"
 REPO_PATH="$HOME/.m2/repository/xyz/rementia/openwakeword/$VERSION"
 ORIGINAL_DIR="$(pwd)"

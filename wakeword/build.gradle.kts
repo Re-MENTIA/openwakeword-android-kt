@@ -67,7 +67,7 @@ afterEvaluate {
             register<MavenPublication>("release") {
                 groupId = "xyz.rementia"
                 artifactId = "openwakeword"
-                version = "0.1.2"
+                version = "0.1.3"
 
                 afterEvaluate {
                     from(components["release"])
