@@ -73,7 +73,6 @@ fun WakeWordDetectionScreen(
     onEngineReady: (WakeWordEngine) -> Unit
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     
     var hasPermission by remember { mutableStateOf(false) }
     var isListening by remember { mutableStateOf(false) }
@@ -118,8 +117,7 @@ fun WakeWordDetectionScreen(
             
             val engine = WakeWordEngine(
                 context = context,
-                models = models,
-                scope = scope
+                models = models
             )
             
             onEngineReady(engine)
@@ -169,8 +167,7 @@ fun WakeWordDetectionScreen(
             // Main visualization
             DetectionVisualization(
                 isListening = isListening,
-                isDetected = isDetected,
-                score = currentScore
+                isDetected = isDetected
             )
             
             // Status display
@@ -212,8 +209,7 @@ fun HeaderSection() {
 @Composable
 fun DetectionVisualization(
     isListening: Boolean,
-    isDetected: Boolean,
-    score: Float
+    isDetected: Boolean
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     
