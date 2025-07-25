@@ -73,6 +73,8 @@ jobs:
           cp "openwakeword-$VERSION-sources.jar" "openwakeword-$VERSION-javadoc.jar"
           md5sum "openwakeword-$VERSION-javadoc.jar" | awk '{print $1}' > "openwakeword-$VERSION-javadoc.jar.md5"
           sha1sum "openwakeword-$VERSION-javadoc.jar" | awk '{print $1}' > "openwakeword-$VERSION-javadoc.jar.sha1"
+          # Sign the javadoc jar
+          gpg --armor --detach-sign --pinentry-mode loopback openwakeword-$VERSION-javadoc.jar
         fi
         
         # Create clean bundle structure
@@ -114,12 +116,49 @@ jobs:
         body: |
           ## OpenWakeWord Android v${{ steps.get_version.outputs.VERSION }}
           
-          ### Maven Central
+          ### 🚀 What's New
+          - **Namespace Change**: Migrated from `io.github.miyashita-code` to `xyz.rementia`
+          - **Maven Central Publishing**: Now available on Maven Central Repository
+          - **CI/CD Improvements**: Automated release process with GitHub Actions
+          
+          ### 📦 Installation
+          
+          Add to your `build.gradle.kts`:
           ```kotlin
-          implementation("xyz.rementia:openwakeword:${{ steps.get_version.outputs.VERSION }}")
+          dependencies {
+              implementation("xyz.rementia:openwakeword:${{ steps.get_version.outputs.VERSION }}")
+          }
           ```
           
-          ### Changes
-          See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+          ### 🔧 Migration Guide
+          
+          If you're upgrading from v0.1.1 or earlier, update your dependency:
+          ```diff
+          - implementation("io.github.miyashita-code:openwakeword:0.1.1")
+          + implementation("xyz.rementia:openwakeword:${{ steps.get_version.outputs.VERSION }}")
+          ```
+          
+          ### 📋 Features
+          - 🔊 **Multi-Wake-Word Support** - Register unlimited ONNX models
+          - 🧩 **Simple API** - Flow-based API with minimal boilerplate
+          - 🚀 **Kotlin Coroutines** - Non-blocking audio processing
+          - 📱 **Android 6.0+** - Supports Android SDK 23+
+          
+          ### 🛠️ Requirements
+          - Android SDK 23+ (Android 6.0 Marshmallow)
+          - RECORD_AUDIO permission
+          - ONNX Runtime Android dependency
+          
+          ### 📄 Documentation
+          - [README](https://github.com/${{ github.repository }}/blob/main/README.md)
+          - [API Documentation](https://github.com/${{ github.repository }}/tree/main/wakeword)
+          
+          ### 🐛 Bug Fixes
+          - Fixed Maven Central publishing configuration
+          - Updated repository URLs and metadata
+          - Added proper GPG signing for all artifacts
+          
+          ### 📝 Full Changelog
+          See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for detailed changes.
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
