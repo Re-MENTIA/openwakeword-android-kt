@@ -36,6 +36,8 @@ dependencies {
 
 ## Usage
 
+For detailed library documentation and important usage notes, see the [library README](wakeword/README.md).
+
 ### Basic Setup
 
 ```kotlin
