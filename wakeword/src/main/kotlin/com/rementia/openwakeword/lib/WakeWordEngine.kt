@@ -14,18 +14,22 @@ import kotlinx.coroutines.flow.*
  * Main entry point for wake word detection.
  * Manages multiple wake word models and emits detection events.
  * 
+ * @property context Android context for accessing resources
  * @property models List of wake word models to detect
+ * @property detectionCooldownMs Cooldown period in milliseconds to prevent duplicate detections (0 to disable)
  * @property scope CoroutineScope for background operations
  */
 class WakeWordEngine(
     private val context: Context,
     private val models: List<WakeWordModel>,
+    private val detectionCooldownMs: Long = 2000L,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
     
     private val assetManager: AssetManager = context.assets
     private val audioRecorder = AudioRecorder(context)
     private val modelProcessors = mutableMapOf<WakeWordModel, ModelProcessor>()
+    private val detectionCooldowns = mutableMapOf<String, Long>()
     
     private val _detections = MutableSharedFlow<WakeWordDetection>()
     
@@ -61,21 +65,25 @@ class WakeWordEngine(
         recordingJob = scope.launch {
             audioRecorder.startRecording()
                 .collect { audioBuffer ->
-                    // Process audio with each model in parallel
                     modelProcessors.entries.map { (model, processor) ->
                         async {
                             try {
                                 val score = processor.process(audioBuffer)
                                 if (score > model.threshold) {
-                                    _detections.emit(
-                                        WakeWordDetection(
-                                            model = model,
-                                            score = score
+                                    val now = System.currentTimeMillis()
+                                    val lastDetection = detectionCooldowns[model.name] ?: 0L
+                                    
+                                    if (detectionCooldownMs == 0L || now - lastDetection >= detectionCooldownMs) {
+                                        _detections.emit(
+                                            WakeWordDetection(
+                                                model = model,
+                                                score = score
+                                            )
                                         )
-                                    )
+                                        detectionCooldowns[model.name] = now
+                                    }
                                 }
                             } catch (e: Exception) {
-                                // Log error but continue processing
                                 e.printStackTrace()
                             }
                         }

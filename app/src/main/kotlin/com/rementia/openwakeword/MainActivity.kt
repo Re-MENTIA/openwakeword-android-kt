@@ -80,7 +80,6 @@ fun WakeWordDetectionScreen(
     var isDetected by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Initializing...") }
     
-    // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -94,7 +93,6 @@ fun WakeWordDetectionScreen(
         }
     }
     
-    // Check permission on start
     LaunchedEffect(Unit) {
         hasPermission = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == 
                        android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -104,7 +102,6 @@ fun WakeWordDetectionScreen(
         }
     }
     
-    // Start wake word detection when permission is granted
     LaunchedEffect(hasPermission) {
         if (hasPermission) {
             val models = listOf(
@@ -122,7 +119,6 @@ fun WakeWordDetectionScreen(
             
             onEngineReady(engine)
             
-            // Collect detection events
             launch {
                 engine.detections.collect { detection ->
                     currentScore = detection.score
@@ -134,7 +130,6 @@ fun WakeWordDetectionScreen(
                         Toast.LENGTH_SHORT
                     ).show()
                     
-                    // Reset detection state after animation
                     delay(2000)
                     isDetected = false
                 }
@@ -161,22 +156,18 @@ fun WakeWordDetectionScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header
             HeaderSection()
             
-            // Main visualization
             DetectionVisualization(
                 isListening = isListening,
                 isDetected = isDetected
             )
             
-            // Status display
             StatusSection(
                 status = status,
                 isListening = isListening
             )
             
-            // Wake word hint
             WakeWordHint()
         }
     }
@@ -242,7 +233,6 @@ fun DetectionVisualization(
         contentAlignment = Alignment.Center,
         modifier = Modifier.size(300.dp)
     ) {
-        // Pulse ring when detected
         if (isDetected) {
             Box(
                 modifier = Modifier
@@ -253,7 +243,6 @@ fun DetectionVisualization(
             )
         }
         
-        // Center circle with status
         Box(
             modifier = Modifier
                 .size(120.dp)

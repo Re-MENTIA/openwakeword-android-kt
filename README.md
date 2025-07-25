@@ -42,36 +42,60 @@ For detailed library documentation and important usage notes, see the [library R
 
 ```kotlin
 // Configure wake word models
+// TIP: Lower threshold = more sensitive, but may cause false positives
+// TIP: Higher threshold = more accurate, but may miss some detections
 val models = listOf(
     WakeWordModel(
         name = "Hey Nugget",
-        modelPath = "hey_nugget_new.onnx",
-        threshold = 0.05f
+        modelPath = "hey_nugget_new.onnx",  // Place model files in app/src/main/assets/
+        threshold = 0.05f                    // Recommended: 0.03-0.1 for most models
     )
 )
 
-// Create the engine
+// Create the engine with configuration
 val wakeWordEngine = WakeWordEngine(
     context = context,
     models = models,
-    scope = lifecycleScope // or any CoroutineScope
+    detectionCooldownMs = 2000L  // Prevents multiple toasts for single utterance
+                                 // Set to 0 to disable cooldown (not recommended)
 )
 
-// Collect detection events
+// Listen for wake word detections
+// IMPORTANT: This runs indefinitely, so manage the coroutine lifecycle properly
 lifecycleScope.launch {
     wakeWordEngine.detections.collect { detection ->
+        // This is called when wake word score exceeds threshold
         println("Wake word detected: ${detection.model.name} (score: ${detection.score})")
+        
+        // TIP: Use the score to show confidence in UI
+        // Scores typically range from 0.0 to 1.0
+        when {
+            detection.score > 0.8f -> println("Very confident detection!")
+            detection.score > 0.6f -> println("Good detection")
+            else -> println("Marginal detection - consider adjusting threshold")
+        }
     }
 }
 
-// Start detection
-wakeWordEngine.start()
+// Start detection (requires RECORD_AUDIO permission)
+// TIP: Check permission before calling start()
+if (hasAudioPermission()) {
+    wakeWordEngine.start()
+}
 
-// Stop when done
-wakeWordEngine.stop()
+// Stop detection when not needed to save battery
+// IMPORTANT: Always stop when your activity/fragment is paused
+override fun onPause() {
+    super.onPause()
+    wakeWordEngine.stop()
+}
 
-// Release resources
-wakeWordEngine.release()
+// Release resources when completely done
+// IMPORTANT: Call this in onDestroy() to prevent memory leaks
+override fun onDestroy() {
+    super.onDestroy()
+    wakeWordEngine.release()
+}
 ```
 
 ### Required Models
@@ -92,6 +116,7 @@ The main entry point for wake word detection.
 class WakeWordEngine(
     context: Context,
     models: List<WakeWordModel>,
+    detectionCooldownMs: Long = 2000L,
     scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 )
 ```
