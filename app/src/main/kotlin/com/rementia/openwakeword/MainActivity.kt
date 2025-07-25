@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import com.rementia.openwakeword.lib.WakeWordEngine
 import com.rementia.openwakeword.lib.model.WakeWordModel
+import com.rementia.openwakeword.lib.model.DetectionMode
 import com.rementia.openwakeword.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -109,12 +110,18 @@ fun WakeWordDetectionScreen(
                     name = "Hello World",
                     modelPath = "hello_world.onnx",
                     threshold = 0.5f
+                ),
+                WakeWordModel(
+                    name = "Multiple Words",
+                    modelPath = "multiple_words.onnx",
+                    threshold = 0.08f
                 )
             )
             
             val engine = WakeWordEngine(
                 context = context,
-                models = models
+                models = models,
+                detectionMode = DetectionMode.SINGLE_BEST
             )
             
             onEngineReady(engine)
@@ -343,7 +350,7 @@ fun WakeWordHint() {
             Spacer(modifier = Modifier.height(4.dp))
             
             Text(
-                text = "\"Hello World\"",
+                text = "\"Hello World\" or \"Multiple Words\"",
                 style = MaterialTheme.typography.headlineMedium,
                 color = AccentGreen,
                 fontWeight = FontWeight.Bold
@@ -352,7 +359,7 @@ fun WakeWordHint() {
             Spacer(modifier = Modifier.height(4.dp))
             
             Text(
-                text = "to trigger detection",
+                text = "to trigger detection (SINGLE_BEST mode)",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextDim
             )

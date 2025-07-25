@@ -6,9 +6,12 @@ A Kotlin library for wake word detection on Android using ONNX Runtime. This lib
 
 - 100% Kotlin implementation
 - Coroutine-based architecture for efficient background processing
-- Support for multiple wake word models simultaneously
+- Support for multiple wake word models with intelligent detection modes
+- SINGLE_BEST mode: Automatically selects the most confident detection
+- ALL mode: Process multiple wake words simultaneously for complex interactions
 - Easy-to-use API with Flow-based detection events
 - ONNX Runtime 1.18.0 for efficient on-device inference
+- Configurable detection cooldown to prevent duplicate notifications
 - Minimal dependencies and clean architecture
 
 ## Requirements
@@ -56,8 +59,16 @@ val models = listOf(
 val wakeWordEngine = WakeWordEngine(
     context = context,
     models = models,
-    detectionCooldownMs = 2000L  // Prevents multiple toasts for single utterance
-                                 // Set to 0 to disable cooldown (not recommended)
+    detectionMode = DetectionMode.SINGLE_BEST,  // Only emit the most confident detection
+    detectionCooldownMs = 2000L                 // Prevents multiple toasts for single utterance
+)
+
+// Alternative: Use ALL mode for multi-command systems
+val multiCommandEngine = WakeWordEngine(
+    context = context,
+    models = models,
+    detectionMode = DetectionMode.ALL,  // Emit all detections above threshold
+    detectionCooldownMs = 500L          // Shorter cooldown for rapid commands
 )
 
 // Listen for wake word detections
@@ -116,6 +127,7 @@ The main entry point for wake word detection.
 class WakeWordEngine(
     context: Context,
     models: List<WakeWordModel>,
+    detectionMode: DetectionMode = DetectionMode.SINGLE_BEST,
     detectionCooldownMs: Long = 2000L,
     scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 )

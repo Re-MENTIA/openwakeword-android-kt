@@ -105,6 +105,107 @@ val rawEngine = WakeWordEngine(
 
 The cooldown period helps prevent duplicate detections caused by the sliding window processing approach. When a wake word is detected, subsequent detections for the same model are ignored until the cooldown period expires.
 
+### Detection Modes for Multiple Models
+
+When using multiple wake word models simultaneously, you can control how detections are processed:
+
+```kotlin
+// SINGLE_BEST mode - Only the most confident detection is emitted
+// Perfect for voice assistants where only one command should trigger
+val engine = WakeWordEngine(
+    context = context,
+    models = listOf(
+        WakeWordModel("Hey Assistant", "assistant.onnx", 0.1f),
+        WakeWordModel("OK Computer", "computer.onnx", 0.08f),
+        WakeWordModel("Hello Robot", "robot.onnx", 0.12f)
+    ),
+    detectionMode = DetectionMode.SINGLE_BEST  // Default mode
+)
+
+// The engine compares detections by:
+// 1. Score-threshold difference (higher is better)
+// 2. Model order (first model wins ties)
+// Example: If both detect with difference=0.3, first model wins
+```
+
+```kotlin
+// ALL mode - All detections above threshold are emitted
+// Great for multi-command systems, gaming, or accessibility
+val engine = WakeWordEngine(
+    context = context,
+    models = listOf(
+        WakeWordModel("Attack", "attack.onnx", 0.1f),
+        WakeWordModel("Defend", "defend.onnx", 0.1f),
+        WakeWordModel("Jump", "jump.onnx", 0.15f)
+    ),
+    detectionMode = DetectionMode.ALL
+)
+
+// Handle different commands independently
+engine.detections.collect { detection ->
+    when (detection.model.name) {
+        "Attack" -> performAttack()
+        "Defend" -> raiseShield()
+        "Jump" -> executeJump()
+    }
+}
+```
+
+#### Real-World Example: Smart Home Assistant
+
+```kotlin
+// Configure models with appropriate thresholds
+val models = listOf(
+    // Primary wake word - lower threshold for better response
+    WakeWordModel(
+        name = "Hey Home",
+        modelPath = "hey_home.onnx",
+        threshold = 0.05f
+    ),
+    // Emergency wake word - higher threshold to prevent false triggers
+    WakeWordModel(
+        name = "Emergency",
+        modelPath = "emergency.onnx",
+        threshold = 0.3f
+    ),
+    // Convenience wake word
+    WakeWordModel(
+        name = "Quick Command",
+        modelPath = "quick_command.onnx",
+        threshold = 0.1f
+    )
+)
+
+// Use SINGLE_BEST to ensure only one assistant responds
+val engine = WakeWordEngine(
+    context = context,
+    models = models,
+    detectionMode = DetectionMode.SINGLE_BEST,
+    detectionCooldownMs = 2000L
+)
+
+// Detection handling with confidence feedback
+engine.detections.collect { detection ->
+    val confidence = detection.score - detection.model.threshold
+    Log.d("WakeWord", "Detected: ${detection.model.name}, Confidence margin: $confidence")
+    
+    when (detection.model.name) {
+        "Emergency" -> {
+            // High confidence required, immediate action
+            handleEmergencyMode()
+        }
+        "Hey Home" -> {
+            // Normal assistant activation
+            startListeningForCommand()
+        }
+        "Quick Command" -> {
+            // Quick action mode
+            executeQuickAction()
+        }
+    }
+}
+```
+
 ### Important Usage Notes
 
 #### Coroutine Scope and Threading
@@ -271,6 +372,7 @@ Main entry point for wake word detection.
 class WakeWordEngine(
     context: Context,
     models: List<WakeWordModel>,
+    detectionMode: DetectionMode = DetectionMode.SINGLE_BEST,
     detectionCooldownMs: Long = 2000L,
     scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 )
@@ -279,6 +381,7 @@ class WakeWordEngine(
 Parameters:
 - `context`: Android context for accessing resources
 - `models`: List of wake word models to detect
+- `detectionMode`: Mode for handling multiple simultaneous detections (default: SINGLE_BEST)
 - `detectionCooldownMs`: Cooldown period in milliseconds to prevent duplicate detections (default: 2000ms, use 0 to disable)
 - `scope`: CoroutineScope for background operations (uses Dispatchers.Default by default)
 
@@ -304,4 +407,15 @@ data class WakeWordDetection(
     val score: Float,
     val timestamp: Long = System.currentTimeMillis()
 )
+```
+
+### DetectionMode
+
+Enum defining how multiple simultaneous detections are handled.
+
+```kotlin
+enum class DetectionMode {
+    SINGLE_BEST,  // Only emit the detection with highest score-threshold difference
+    ALL           // Emit all detections that exceed their thresholds
+}
 ```

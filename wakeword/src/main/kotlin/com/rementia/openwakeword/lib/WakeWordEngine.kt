@@ -7,6 +7,7 @@ import com.rementia.openwakeword.lib.audio.AudioRecorder
 import com.rementia.openwakeword.lib.ml.OnnxModelRunner
 import com.rementia.openwakeword.lib.model.WakeWordDetection
 import com.rementia.openwakeword.lib.model.WakeWordModel
+import com.rementia.openwakeword.lib.model.DetectionMode
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -16,12 +17,14 @@ import kotlinx.coroutines.flow.*
  * 
  * @property context Android context for accessing resources
  * @property models List of wake word models to detect
+ * @property detectionMode Mode for handling multiple simultaneous detections
  * @property detectionCooldownMs Cooldown period in milliseconds to prevent duplicate detections (0 to disable)
  * @property scope CoroutineScope for background operations
  */
 class WakeWordEngine(
     private val context: Context,
     private val models: List<WakeWordModel>,
+    private val detectionMode: DetectionMode = DetectionMode.SINGLE_BEST,
     private val detectionCooldownMs: Long = 2000L,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
@@ -65,30 +68,65 @@ class WakeWordEngine(
         recordingJob = scope.launch {
             audioRecorder.startRecording()
                 .collect { audioBuffer ->
-                    modelProcessors.entries.map { (model, processor) ->
+                    // Process all models in parallel and collect results
+                    val detectionResults = modelProcessors.entries.mapIndexed { index, (model, processor) ->
                         async {
                             try {
                                 val score = processor.process(audioBuffer)
                                 if (score > model.threshold) {
-                                    val now = System.currentTimeMillis()
-                                    val lastDetection = detectionCooldowns[model.name] ?: 0L
-                                    
-                                    if (detectionCooldownMs == 0L || now - lastDetection >= detectionCooldownMs) {
-                                        _detections.emit(
-                                            WakeWordDetection(
-                                                model = model,
-                                                score = score
-                                            )
-                                        )
-                                        detectionCooldowns[model.name] = now
-                                    }
+                                    DetectionResult(
+                                        model = model,
+                                        score = score,
+                                        difference = score - model.threshold,
+                                        index = index
+                                    )
+                                } else {
+                                    null
                                 }
                             } catch (e: Exception) {
                                 e.printStackTrace()
+                                null
                             }
                         }
-                    }.awaitAll()
+                    }.awaitAll().filterNotNull()
+                    
+                    // Process results based on detection mode
+                    when (detectionMode) {
+                        DetectionMode.SINGLE_BEST -> {
+                            // Select the best detection based on score-threshold difference
+                            detectionResults.maxByOrNull { result ->
+                                // Primary: difference, Secondary: inverse index (lower index = higher priority)
+                                result.difference * 1000 - result.index * 0.001
+                            }?.let { result ->
+                                emitDetection(result.model, result.score)
+                            }
+                        }
+                        DetectionMode.ALL -> {
+                            // Emit all detections that passed threshold
+                            detectionResults.forEach { result ->
+                                emitDetection(result.model, result.score)
+                            }
+                        }
+                    }
                 }
+        }
+    }
+    
+    /**
+     * Emit a detection event with cooldown check.
+     */
+    private suspend fun emitDetection(model: WakeWordModel, score: Float) {
+        val now = System.currentTimeMillis()
+        val lastDetection = detectionCooldowns[model.name] ?: 0L
+        
+        if (detectionCooldownMs == 0L || now - lastDetection >= detectionCooldownMs) {
+            _detections.emit(
+                WakeWordDetection(
+                    model = model,
+                    score = score
+                )
+            )
+            detectionCooldowns[model.name] = now
         }
     }
     
@@ -109,6 +147,16 @@ class WakeWordEngine(
         modelProcessors.values.forEach { it.close() }
         modelProcessors.clear()
     }
+    
+    /**
+     * Internal data class for detection results with metadata.
+     */
+    private data class DetectionResult(
+        val model: WakeWordModel,
+        val score: Float,
+        val difference: Float,
+        val index: Int
+    )
     
     /**
      * Internal class to process audio for a specific model.
