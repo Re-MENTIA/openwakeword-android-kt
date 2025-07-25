@@ -55,7 +55,7 @@ afterEvaluate {
         repositories {
             maven {
                 name = "centralPortal"
-                url = uri("https://central.sonatype.com/api/v1/publisher/deployments/upload")
+                url = uri("https://central.sonatype.com/api/v1/publisher/upload")
                 credentials {
                     username = findProperty("ossrhUsername") as String? ?: ""
                     password = findProperty("ossrhPassword") as String? ?: ""
@@ -67,7 +67,7 @@ afterEvaluate {
             register<MavenPublication>("release") {
                 groupId = "xyz.rementia"
                 artifactId = "openwakeword"
-                version = "0.1.1"
+                version = "0.1.2"
 
                 afterEvaluate {
                     from(components["release"])

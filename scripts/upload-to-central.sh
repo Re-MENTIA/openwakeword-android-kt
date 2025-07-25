@@ -1,9 +1,10 @@
 #!/bin/bash
 # Upload script for Central Portal
 
-VERSION="${1:-0.1.1}"
+VERSION="${1:-0.1.2}"
 BUNDLE="$HOME/openwakeword-$VERSION-bundle.zip"
-REPO_PATH="$HOME/.m2/repository/io/github/miyashita-code/openwakeword/$VERSION"
+REPO_PATH="$HOME/.m2/repository/xyz/rementia/openwakeword/$VERSION"
+ORIGINAL_DIR="$(pwd)"
 
 echo "Creating bundle for version $VERSION..."
 cd "$REPO_PATH" || exit 1
@@ -27,22 +28,23 @@ fi
 # Create clean bundle directory
 TEMP_DIR="$HOME/maven-bundle-upload"
 rm -rf "$TEMP_DIR"
-mkdir -p "$TEMP_DIR/io/github/miyashita-code/openwakeword/$VERSION"
+mkdir -p "$TEMP_DIR/xyz/rementia/openwakeword/$VERSION"
 
 # Copy all artifact files
-cp openwakeword-$VERSION*.* "$TEMP_DIR/io/github/miyashita-code/openwakeword/$VERSION/"
+cp openwakeword-$VERSION*.* "$TEMP_DIR/xyz/rementia/openwakeword/$VERSION/"
 
-# Create bundle (ONLY io/ directory, no root files)
+# Create bundle (ONLY xyz/ directory, no root files)
 cd "$TEMP_DIR"
-zip -r "$BUNDLE" io/
+zip -r "$BUNDLE" xyz/
 
 # Load credentials
-cd - > /dev/null
-if [ -f gradle.properties ]; then
-    USERNAME=$(grep ossrhUsername gradle.properties | cut -d'=' -f2)
-    PASSWORD=$(grep ossrhPassword gradle.properties | cut -d'=' -f2)
+PROJECT_ROOT="/Users/miyatech/AndroidStudioProjects/openwakewordandroidkt"
+
+if [ -f "$PROJECT_ROOT/gradle.properties" ]; then
+    USERNAME=$(grep ossrhUsername "$PROJECT_ROOT/gradle.properties" | cut -d'=' -f2)
+    PASSWORD=$(grep ossrhPassword "$PROJECT_ROOT/gradle.properties" | cut -d'=' -f2)
 else
-    echo "gradle.properties not found!"
+    echo "gradle.properties not found at $PROJECT_ROOT!"
     exit 1
 fi
 

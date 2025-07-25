@@ -54,7 +54,7 @@ jobs:
     - name: Create bundle for Central Portal
       run: |
         VERSION=${{ steps.get_version.outputs.VERSION }}
-        REPO_PATH="$HOME/.m2/repository/io/github/miyashita-code/openwakeword/$VERSION"
+        REPO_PATH="$HOME/.m2/repository/xyz/rementia/openwakeword/$VERSION"
         cd "$REPO_PATH"
         
         # Generate checksums
@@ -75,12 +75,12 @@ jobs:
         # Create clean bundle structure
         TEMP_DIR="$HOME/maven-bundle-ci"
         rm -rf "$TEMP_DIR"
-        mkdir -p "$TEMP_DIR/io/github/miyashita-code/openwakeword/$VERSION"
-        cp openwakeword-$VERSION*.* "$TEMP_DIR/io/github/miyashita-code/openwakeword/$VERSION/"
+        mkdir -p "$TEMP_DIR/xyz/rementia/openwakeword/$VERSION"
+        cp openwakeword-$VERSION*.* "$TEMP_DIR/xyz/rementia/openwakeword/$VERSION/"
         
-        # Create bundle with ONLY io/ directory
+        # Create bundle with ONLY xyz/ directory
         cd "$TEMP_DIR"
-        zip -r ${{ github.workspace }}/openwakeword-${{ steps.get_version.outputs.VERSION }}-bundle.zip io/
+        zip -r ${{ github.workspace }}/openwakeword-${{ steps.get_version.outputs.VERSION }}-bundle.zip xyz/
     
     - name: Upload to Central Portal
       run: |
@@ -113,7 +113,7 @@ jobs:
           
           ### Maven Central
           ```kotlin
-          implementation("io.github.miyashita-code:openwakeword:${{ steps.get_version.outputs.VERSION }}")
+          implementation("xyz.rementia:openwakeword:${{ steps.get_version.outputs.VERSION }}")
           ```
           
           ### Changes
