@@ -65,7 +65,6 @@ tasks.dokkaHtml {
     dokkaSourceSets {
         configureEach {
             moduleName.set("OpenWakeWord Android Library")
-            includes.from("README.md")
             sourceLink {
                 localDirectory.set(file("src/main/kotlin"))
                 remoteUrl.set(uri("https://github.com/rementia/openwakeword-android-kt/tree/main/wakeword/src/main/kotlin").toURL())

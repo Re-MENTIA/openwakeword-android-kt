@@ -1,18 +1,12 @@
 # OpenWakeWord Android Kotlin Library
 
-A Kotlin library for wake word detection on Android using ONNX Runtime. This library provides a clean, coroutine-based API for detecting wake words in real-time audio streams.
+Kotlin library for on-device wake word detection on Android using ONNX Runtime.
 
 ## Features
 
-- 100% Kotlin implementation
-- Coroutine-based architecture for efficient background processing
-- Support for multiple wake word models with intelligent detection modes
-- SINGLE_BEST mode: Automatically selects the most confident detection
-- ALL mode: Process multiple wake words simultaneously for complex interactions
-- Easy-to-use API with Flow-based detection events
-- ONNX Runtime 1.18.0 for efficient on-device inference
-- Configurable detection cooldown to prevent duplicate notifications
-- Minimal dependencies and clean architecture
+🔊 **Multi-Wake-Word** - Register unlimited ONNX classifier models at runtime  
+🧩 **Straightforward API** - Simple Flow-based API with minimal boilerplate  
+🚀 **Kotlin Coroutines** - Background audio + inference without blocking UI
 
 ## Requirements
 
@@ -21,15 +15,9 @@ A Kotlin library for wake word detection on Android using ONNX Runtime. This lib
 
 ## Installation
 
-### MavenLocal
-
-First, publish the library to your local Maven repository:
-
 ```bash
 ./gradlew :wakeword:publishToMavenLocal
 ```
-
-Then add the dependency to your app's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
@@ -39,83 +27,73 @@ dependencies {
 
 ## Usage
 
-For detailed library documentation and important usage notes, see the [library README](wakeword/README.md).
-
-### Basic Setup
+### Basic Example
 
 ```kotlin
-// Configure wake word models
-// TIP: Lower threshold = more sensitive, but may cause false positives
-// TIP: Higher threshold = more accurate, but may miss some detections
+// 1. Define wake word models
 val models = listOf(
-    WakeWordModel(
-        name = "Hey Nugget",
-        modelPath = "hey_nugget_new.onnx",  // Place model files in app/src/main/assets/
-        threshold = 0.05f                    // Recommended: 0.03-0.1 for most models
-    )
+    WakeWordModel("Hello World", "hello_world.onnx", threshold = 0.5f),
+    WakeWordModel("Hey Assistant", "hey_assistant.onnx", threshold = 0.08f)
 )
 
-// Create the engine with configuration
-val wakeWordEngine = WakeWordEngine(
+// 2. Create engine
+val engine = WakeWordEngine(
     context = context,
     models = models,
-    detectionMode = DetectionMode.SINGLE_BEST,  // Only emit the most confident detection
-    detectionCooldownMs = 2000L                 // Prevents multiple toasts for single utterance
+    detectionMode = DetectionMode.SINGLE_BEST
 )
 
-// Alternative: Use ALL mode for multi-command systems
-val multiCommandEngine = WakeWordEngine(
-    context = context,
-    models = models,
-    detectionMode = DetectionMode.ALL,  // Emit all detections above threshold
-    detectionCooldownMs = 500L          // Shorter cooldown for rapid commands
-)
+// 3. Start detection
+engine.start()
 
-// Listen for wake word detections
-// IMPORTANT: This runs indefinitely, so manage the coroutine lifecycle properly
+// 4. Collect detections
 lifecycleScope.launch {
-    wakeWordEngine.detections.collect { detection ->
-        // This is called when wake word score exceeds threshold
-        println("Wake word detected: ${detection.model.name} (score: ${detection.score})")
-        
-        // TIP: Use the score to show confidence in UI
-        // Scores typically range from 0.0 to 1.0
-        when {
-            detection.score > 0.8f -> println("Very confident detection!")
-            detection.score > 0.6f -> println("Good detection")
-            else -> println("Marginal detection - consider adjusting threshold")
-        }
+    engine.detections.collect { detection ->
+        Log.d("WakeWord", "${detection.model.name} detected!")
     }
 }
 
-// Start detection (requires RECORD_AUDIO permission)
-// TIP: Check permission before calling start()
-if (hasAudioPermission()) {
-    wakeWordEngine.start()
-}
-
-// Stop detection when not needed to save battery
-// IMPORTANT: Always stop when your activity/fragment is paused
-override fun onPause() {
-    super.onPause()
-    wakeWordEngine.stop()
-}
-
-// Release resources when completely done
-// IMPORTANT: Call this in onDestroy() to prevent memory leaks
+// 5. Cleanup
 override fun onDestroy() {
     super.onDestroy()
-    wakeWordEngine.release()
+    engine.release()
 }
 ```
 
-### Required Models
+### Multiple Models Example
 
-Place the following ONNX model files in your app's `assets` directory:
+```kotlin
+// Configure multiple wake words with different thresholds
+val models = listOf(
+    WakeWordModel("Computer", "computer.onnx", 0.1f),
+    WakeWordModel("Assistant", "assistant.onnx", 0.08f),
+    WakeWordModel("Robot", "robot.onnx", 0.15f)
+)
 
-- `hey_nugget_new.onnx` - Wake word detection model
-- `melspectrogram.onnx` - Mel-spectrogram computation model
-- `embedding_model.onnx` - Feature embedding model
+// SINGLE_BEST mode - only the most confident detection
+val singleEngine = WakeWordEngine(
+    context = context,
+    models = models,
+    detectionMode = DetectionMode.SINGLE_BEST
+)
+
+// ALL mode - all detections above threshold
+val multiEngine = WakeWordEngine(
+    context = context,
+    models = models,
+    detectionMode = DetectionMode.ALL
+)
+```
+
+### Required Files
+
+Place ONNX models in your app's `assets` directory:
+```
+app/src/main/assets/
+├── your_wake_word.onnx
+├── melspectrogram.onnx
+└── embedding_model.onnx
+```
 
 ## API Reference
 
@@ -184,12 +162,14 @@ cd openwakeword-android-kt
 
 ## Sample App
 
-The repository includes a sample app demonstrating the library usage. The app:
-- Requests microphone permission
-- Displays real-time detection scores
-- Shows toast notifications when wake words are detected
+<p align="center">
+  <img src="docs/refs/sample_app_1.png" width="250" alt="Sample App Screenshot 1" />
+  <img src="docs/refs/sample_app_2.png" width="250" alt="Sample App Screenshot 2" />
+</p>
 
 ## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ```
 Copyright 2024 Rementia
@@ -207,9 +187,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
+This project includes code derived from [OpenWakeWord for Android](https://github.com/hasanatlodhi/OpenwakewordforAndroid) by hasanatlodhi, also licensed under Apache License 2.0.
+
 ## Acknowledgments
 
-This library is based on the original [OpenWakeWord for Android](https://github.com/hasanatlodhi/OpenwakewordforAndroid) implementation by hasanatlodhi. We've ported it to Kotlin and restructured it as a reusable library with a modern API.
+This library is based on and inspired by [OpenWakeWord for Android](https://github.com/hasanatlodhi/OpenwakewordforAndroid) by hasanatlodhi, licensed under Apache License 2.0. We've ported the Java implementation to Kotlin and restructured it as a reusable library with a modern Flow-based API.
 
 ### Model Attribution
 
@@ -218,6 +200,14 @@ This project uses models from the [OpenWakeWord](https://github.com/dscripka/ope
 - `embedding_model.onnx` - Speech embedding model (Apache 2.0 License, originally from Google)
 
 The embedding model is based on Google's speech embedding model released under Apache 2.0 License.
+
+### Training Custom Wake Words
+
+To train your own wake word models:
+1. Use the official OpenWakeWord training repository: [openWakeWord](https://github.com/dscripka/openWakeWord)
+2. Follow the training notebook: [Google Colab Training Guide](https://colab.research.google.com/drive/1q1oe2zOyZp7UsB3jJiQ1IFn8z5YfjwEb?usp=sharing)
+3. Export your trained model as ONNX format
+4. Place the `.onnx` file in your app's `assets` directory
 
 ## Contributing
 
