@@ -65,7 +65,7 @@ afterEvaluate {
         
         publications {
             register<MavenPublication>("release") {
-                groupId = "io.github.miyashita-code"
+                groupId = "xyz.rementia"
                 artifactId = "openwakeword"
                 version = "0.1.1"
 
@@ -76,7 +76,7 @@ afterEvaluate {
                 pom {
                     name.set("OpenWakeWord Android")
                     description.set("Kotlin library for on-device wake word detection on Android using ONNX Runtime")
-                    url.set("https://github.com/miyashita-code/openwakeword-android-kt")
+                    url.set("https://github.com/Re-MENTIA/openwakeword-android-kt")
 
                     licenses {
                         license {
@@ -87,16 +87,16 @@ afterEvaluate {
 
                     developers {
                         developer {
-                            id.set("miyashita-code")
-                            name.set("Miyashita Code")
-                            email.set("dev@miyashita-code.com")
+                            id.set("re-mentia")
+                            name.set("Re-MENTIA")
+                            email.set("dev@rementia.tech")
                         }
                     }
 
                     scm {
-                        connection.set("scm:git:git://github.com/miyashita-code/openwakeword-android-kt.git")
-                        developerConnection.set("scm:git:ssh://github.com/miyashita-code/openwakeword-android-kt.git")
-                        url.set("https://github.com/miyashita-code/openwakeword-android-kt")
+                        connection.set("scm:git:git://github.com/Re-MENTIA/openwakeword-android-kt.git")
+                        developerConnection.set("scm:git:ssh://github.com/Re-MENTIA/openwakeword-android-kt.git")
+                        url.set("https://github.com/Re-MENTIA/openwakeword-android-kt")
                     }
                 }
             }
@@ -135,7 +135,7 @@ tasks.dokkaHtml {
             moduleName.set("OpenWakeWord Android Library")
             sourceLink {
                 localDirectory.set(file("src/main/kotlin"))
-                remoteUrl.set(uri("https://github.com/miyashita-code/openwakeword-android-kt/tree/main/wakeword/src/main/kotlin").toURL())
+                remoteUrl.set(uri("https://github.com/Re-MENTIA/openwakeword-android-kt/tree/main/wakeword/src/main/kotlin").toURL())
                 remoteLineSuffix.set("#L")
             }
         }
