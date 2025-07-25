@@ -1,0 +1,19 @@
+[versions]
+agp = "8.4.0"
+kotlin = "1.9.23"
+onnx = "1.18.0"
+coroutines = "1.9.0"
+
+[plugins]
+androidApplication = { id = "com.android.application", version.ref = "agp" }
+androidLibrary     = { id = "com.android.library",     version.ref = "agp" }
+kotlinAndroid      = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+
+[libraries]
+androidxCoreKtx       = { group = "androidx.core",     name = "core-ktx",          version = "1.13.1" }
+androidxAppcompat     = { group = "androidx.appcompat",name = "appcompat",         version = "1.7.0" }
+material              = { group = "com.google.android.material", name = "material",version = "1.12.0" }
+coroutinesAndroid     = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+onnxRuntimeAndroid    = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android",     version.ref = "onnx" }
+commonsMath3          = { group = "org.apache.commons", name = "commons-math3",     version = "3.6.1" }
+junit4                = { group = "junit",             name = "junit",             version = "4.13.2" }
