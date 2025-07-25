@@ -36,13 +36,28 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlin { jvmToolchain(17) }
+    
+    buildFeatures {
+        compose = true
+    }
+    
+    composeOptions {
+        kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
+    }
 }
 
 dependencies {
     testImplementation(libs.junit4)
     implementation(libs.androidxCoreKtx)
-    implementation(libs.androidxAppcompat)
-    implementation(libs.material)
+    
+    // Compose
+    implementation(libs.activityCompose)
+    implementation(libs.composeUi)
+    implementation(libs.composeUiToolingPreview)
+    implementation(libs.composeMaterial3)
+    implementation(libs.composeMaterialIcons)
+    implementation(libs.lifecycleCompose)
+    debugImplementation(libs.composeUiTooling)
 
     implementation(libs.coroutinesAndroid)
     implementation(libs.onnxRuntimeAndroid)
