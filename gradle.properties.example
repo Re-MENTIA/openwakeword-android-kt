@@ -1,0 +1,17 @@
+# Copy this file to gradle.properties and fill in your actual values
+# DO NOT commit gradle.properties to version control!
+# IMPORTANT: gradle.properties is in .gitignore and should NEVER be committed
+
+# Sonatype OSSRH credentials
+ossrhUsername=your-sonatype-username
+ossrhPassword=your-sonatype-password
+
+# GPG signing configuration
+signing.keyId=ABCD1234
+signing.password=your-gpg-passphrase
+signing.secretKeyRingFile=/Users/your-username/.gnupg/secring.gpg
+
+# Optional: Use in-memory signing (more secure)
+# signing.gnupg.executable=gpg
+# signing.gnupg.keyName=ABCD1234
+# signing.gnupg.passphrase=your-gpg-passphrase

@@ -4,6 +4,7 @@ build/
 
 # Local configuration file (sdk path, etc)
 local.properties
+gradle.properties
 
 # Log/OS Files
 *.log
@@ -58,3 +59,8 @@ __pycache__/
 *.tflite
 !app/src/main/assets/*.onnx
 !app/src/main/assets/*.tflite
+
+PUBLISHING.md
+key
+docs/mds/*
+CLAUDE.md

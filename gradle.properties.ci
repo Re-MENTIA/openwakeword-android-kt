@@ -1,0 +1,10 @@
+# CI/CD用の設定ファイル
+# このファイルはコミット可能（機密情報なし）
+
+# AndroidX
+android.useAndroidX=true
+
+# Gradle
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+org.gradle.parallel=true
+org.gradle.caching=true

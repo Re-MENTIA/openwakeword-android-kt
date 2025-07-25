@@ -1,0 +1,122 @@
+name: Release to Maven Central
+
+on:
+  push:
+    tags:
+      - 'v*' # v0.1.2, v1.0.0 などのタグでトリガー
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+    
+    - name: Setup gradle.properties for CI
+      run: cp gradle.properties.ci gradle.properties
+    
+    - name: Import GPG key
+      run: |
+        echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 --decode | gpg --batch --import
+        gpg --list-secret-keys --keyid-format LONG
+        
+        # Export to legacy format for Gradle
+        mkdir -p ~/.gnupg
+        gpg --export-secret-keys ${{ secrets.SIGNING_KEY_ID }} > ~/.gnupg/secring.gpg
+    
+    - name: Extract version from tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+    
+    - name: Update version in build.gradle.kts
+      run: |
+        sed -i 's/version = ".*"/version = "${{ steps.get_version.outputs.VERSION }}"/' wakeword/build.gradle.kts
+    
+    - name: Build and sign artifacts
+      run: |
+        ./gradlew :wakeword:publishToMavenLocal
+      env:
+        ORG_GRADLE_PROJECT_ossrhUsername: ${{ secrets.OSSRH_USERNAME }}
+        ORG_GRADLE_PROJECT_ossrhPassword: ${{ secrets.OSSRH_PASSWORD }}
+        ORG_GRADLE_PROJECT_signing.keyId: ${{ secrets.SIGNING_KEY_ID }}
+        ORG_GRADLE_PROJECT_signing.password: ""
+        ORG_GRADLE_PROJECT_signing.secretKeyRingFile: /home/runner/.gnupg/secring.gpg
+    
+    - name: Create bundle for Central Portal
+      run: |
+        VERSION=${{ steps.get_version.outputs.VERSION }}
+        REPO_PATH="$HOME/.m2/repository/io/github/miyashita-code/openwakeword/$VERSION"
+        cd "$REPO_PATH"
+        
+        # Generate checksums
+        for file in *.jar *.aar *.pom *.module; do
+          if [ -f "$file" ]; then
+            md5sum "$file" | awk '{print $1}' > "$file.md5"
+            sha1sum "$file" | awk '{print $1}' > "$file.sha1"
+          fi
+        done
+        
+        # Create javadoc jar
+        if [ ! -f "openwakeword-$VERSION-javadoc.jar" ]; then
+          cp "openwakeword-$VERSION-sources.jar" "openwakeword-$VERSION-javadoc.jar"
+          md5sum "openwakeword-$VERSION-javadoc.jar" | awk '{print $1}' > "openwakeword-$VERSION-javadoc.jar.md5"
+          sha1sum "openwakeword-$VERSION-javadoc.jar" | awk '{print $1}' > "openwakeword-$VERSION-javadoc.jar.sha1"
+        fi
+        
+        # Create clean bundle structure
+        TEMP_DIR="$HOME/maven-bundle-ci"
+        rm -rf "$TEMP_DIR"
+        mkdir -p "$TEMP_DIR/io/github/miyashita-code/openwakeword/$VERSION"
+        cp openwakeword-$VERSION*.* "$TEMP_DIR/io/github/miyashita-code/openwakeword/$VERSION/"
+        
+        # Create bundle with ONLY io/ directory
+        cd "$TEMP_DIR"
+        zip -r ${{ github.workspace }}/openwakeword-${{ steps.get_version.outputs.VERSION }}-bundle.zip io/
+    
+    - name: Upload to Central Portal
+      run: |
+        RESPONSE=$(curl -X POST \
+          -u "${{ secrets.OSSRH_USERNAME }}:${{ secrets.OSSRH_PASSWORD }}" \
+          -F "bundle=@openwakeword-${{ steps.get_version.outputs.VERSION }}-bundle.zip" \
+          -F "publishingType=AUTOMATIC" \
+          -w "\n%{http_code}" \
+          https://central.sonatype.com/api/v1/publisher/upload)
+        
+        HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+        BODY=$(echo "$RESPONSE" | head -n-1)
+        
+        if [ "$HTTP_CODE" != "201" ] && [ "$HTTP_CODE" != "200" ]; then
+          echo "Upload failed with HTTP code $HTTP_CODE"
+          echo "Response: $BODY"
+          exit 1
+        fi
+        
+        echo "Upload successful!"
+        echo "Response: $BODY"
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          openwakeword-${{ steps.get_version.outputs.VERSION }}-bundle.zip
+        body: |
+          ## OpenWakeWord Android v${{ steps.get_version.outputs.VERSION }}
+          
+          ### Maven Central
+          ```kotlin
+          implementation("io.github.miyashita-code:openwakeword:${{ steps.get_version.outputs.VERSION }}")
+          ```
+          
+          ### Changes
+          See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

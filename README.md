@@ -21,7 +21,7 @@ Kotlin library for on-device wake word detection on Android using ONNX Runtime.
 
 ```kotlin
 dependencies {
-    implementation("com.rementia:openwakeword:0.1.0")
+    implementation("io.github.miyashita-code:openwakeword:0.1.1")
 }
 ```
 
