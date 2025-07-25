@@ -109,19 +109,20 @@ fun WakeWordDetectionScreen(
                 WakeWordModel(
                     name = "Hello World",
                     modelPath = "hello_world.onnx",
-                    threshold = 0.5f
+                    threshold = 0.03f
                 ),
                 WakeWordModel(
                     name = "Multiple Words",
                     modelPath = "multiple_words.onnx",
-                    threshold = 0.08f
+                    threshold = 0.03f
                 )
             )
             
             val engine = WakeWordEngine(
                 context = context,
                 models = models,
-                detectionMode = DetectionMode.SINGLE_BEST
+                detectionMode = DetectionMode.SINGLE_BEST,
+                detectionCooldownMs = 5000L
             )
             
             onEngineReady(engine)

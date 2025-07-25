@@ -3,8 +3,58 @@ package com.rementia.openwakeword.lib.model
 /**
  * Detection mode for handling multiple wake word models.
  * 
- * Determines how the engine processes and emits detections when multiple
- * models detect wake words simultaneously.
+ * This enum determines how the [WakeWordEngine] processes and emits detections 
+ * when multiple models detect wake words simultaneously in the same audio frame.
+ * 
+ * ## Mode Selection Guidelines
+ * 
+ * ### Use SINGLE_BEST when:
+ * - You have multiple similar wake words and want to avoid confusion
+ * - Your app should respond to only one command at a time
+ * - You want the most confident detection to take precedence
+ * 
+ * ### Use ALL when:
+ * - Different wake words trigger different actions
+ * - You want to support multi-command scenarios
+ * - Wake words are sufficiently distinct to avoid false triggers
+ * 
+ * ## Examples
+ * 
+ * ### Voice Assistant (SINGLE_BEST)
+ * ```kotlin
+ * // Multiple ways to activate the same assistant
+ * val models = listOf(
+ *     WakeWordModel("Hey Assistant", "hey_assistant.onnx", 0.1f),
+ *     WakeWordModel("OK Assistant", "ok_assistant.onnx", 0.1f),
+ *     WakeWordModel("Computer", "computer.onnx", 0.15f)
+ * )
+ * 
+ * val engine = WakeWordEngine(
+ *     context = context,
+ *     models = models,
+ *     detectionMode = DetectionMode.SINGLE_BEST
+ * )
+ * // Only the highest confidence detection is emitted
+ * ```
+ * 
+ * ### Smart Home Controller (ALL)
+ * ```kotlin
+ * // Different wake words for different actions
+ * val models = listOf(
+ *     WakeWordModel("Lights On", "lights_on.onnx", 0.2f),
+ *     WakeWordModel("Lights Off", "lights_off.onnx", 0.2f),
+ *     WakeWordModel("Temperature Up", "temp_up.onnx", 0.2f)
+ * )
+ * 
+ * val engine = WakeWordEngine(
+ *     context = context,
+ *     models = models,
+ *     detectionMode = DetectionMode.ALL
+ * )
+ * // All detected commands are emitted
+ * ```
+ * 
+ * @see WakeWordEngine
  */
 enum class DetectionMode {
     /**
