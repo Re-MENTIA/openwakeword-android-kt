@@ -32,3 +32,29 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Claude Code's local configs
+.claude
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*~
+*.swp
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Model files (but keep the ones in assets)
+*.onnx
+*.tflite
+!app/src/main/assets/*.onnx
+!app/src/main/assets/*.tflite

@@ -1,94 +1,214 @@
-# openwakeword-android-kt  
-*Kotlin library for on‑device multi‑wake‑word detection with Open Wake Word & ONNX Runtime.*
+# OpenWakeWord Android Kotlin Library
 
-License: Apache‑2.0
-
----
+Kotlin library for on-device wake word detection on Android using ONNX Runtime.
 
 ## Features
 
-| ★ | Description |
-|---|-------------|
-| 🔊 **Multi‑Wake‑Word** | Register unlimited ONNX classifier models at runtime. |
-| 🧩 **Straightforward API** | 3 lines to start listening. |
-| 🚀 **Kotlin Coroutines** | Background audio + inference without blocking UI. |
+🔊 **Multi-Wake-Word** - Register unlimited ONNX classifier models at runtime  
+🧩 **Straightforward API** - Simple Flow-based API with minimal boilerplate  
+🚀 **Kotlin Coroutines** - Background audio + inference without blocking UI
 
----
+## Requirements
 
-## Quick Start
+- Android SDK 23+ (Android 6.0 Marshmallow)
+- RECORD_AUDIO permission
 
-Add the dependency (JitPack example):
+## Installation
 
-~~~gradle
-repositories { maven { url 'https://jitpack.io' } }
-dependencies { implementation 'com.github.your‑org:openwakeword-android-kt:1.0.0' }
-~~~
+```bash
+./gradlew :wakeword:publishToMavenLocal
+```
 
-Load the common models once, then add any number of wake‑words:
-
-~~~kotlin
-val detector = WakeWordDetectorManager(context)
-
-lifecycleScope.launch {
-    detector.initCommonModels(
-        melModelAsset = "melspectrogram.onnx",
-        embedModelAsset = "embedding.onnx"
-    )
-
-    detector.addModel(
-        WakeWordModel("hey_nugget", "hey_nugget.onnx", 0.05f) { key, score ->
-            Toast.makeText(this@MainActivity, "$key detected @$score", Toast.LENGTH_SHORT).show()
-        }
-    )
-
-    detector.startListening()   // microphone ON
+```kotlin
+dependencies {
+    implementation("com.rementia:openwakeword:0.1.0")
 }
-~~~
+```
 
-Stop when no longer needed:
+## Usage
 
-~~~kotlin
-detector.stopListening()
-~~~
+### Basic Example
 
----
+```kotlin
+// 1. Define wake word models
+val models = listOf(
+    WakeWordModel("Hello World", "hello_world.onnx", threshold = 0.5f),
+    WakeWordModel("Hey Assistant", "hey_assistant.onnx", threshold = 0.08f)
+)
 
-## Architecture
+// 2. Create engine
+val engine = WakeWordEngine(
+    context = context,
+    models = models,
+    detectionMode = DetectionMode.SINGLE_BEST
+)
 
-~~~text
-WakeWordDetectorManager
- ├─ AudioIO (AudioRecord 16 kHz)
- ├─ Pipeline (MelSpectrogram + Embedding OrtSession)
- └─ ModelManager (n × classifier OrtSession + threshold + callback)
-~~~
+// 3. Start detection
+engine.start()
 
-The heavy Mel/Embedding computation runs **once per audio chunk** and is reused by every classifier, minimizing CPU & battery drain.
+// 4. Collect detections
+lifecycleScope.launch {
+    engine.detections.collect { detection ->
+        Log.d("WakeWord", "${detection.model.name} detected!")
+    }
+}
 
----
+// 5. Cleanup
+override fun onDestroy() {
+    super.onDestroy()
+    engine.release()
+}
+```
+
+### Multiple Models Example
+
+```kotlin
+// Configure multiple wake words with different thresholds
+val models = listOf(
+    WakeWordModel("Computer", "computer.onnx", 0.1f),
+    WakeWordModel("Assistant", "assistant.onnx", 0.08f),
+    WakeWordModel("Robot", "robot.onnx", 0.15f)
+)
+
+// SINGLE_BEST mode - only the most confident detection
+val singleEngine = WakeWordEngine(
+    context = context,
+    models = models,
+    detectionMode = DetectionMode.SINGLE_BEST
+)
+
+// ALL mode - all detections above threshold
+val multiEngine = WakeWordEngine(
+    context = context,
+    models = models,
+    detectionMode = DetectionMode.ALL
+)
+```
+
+### Required Files
+
+Place ONNX models in your app's `assets` directory:
+```
+app/src/main/assets/
+├── your_wake_word.onnx
+├── melspectrogram.onnx
+└── embedding_model.onnx
+```
+
+## API Reference
+
+### WakeWordEngine
+
+The main entry point for wake word detection.
+
+```kotlin
+class WakeWordEngine(
+    context: Context,
+    models: List<WakeWordModel>,
+    detectionMode: DetectionMode = DetectionMode.SINGLE_BEST,
+    detectionCooldownMs: Long = 2000L,
+    scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+)
+```
+
+**Properties:**
+- `detections: Flow<WakeWordDetection>` - Flow of detection events
+
+**Methods:**
+- `start()` - Start wake word detection
+- `stop()` - Stop wake word detection
+- `release()` - Release all resources
+
+### WakeWordModel
+
+Configuration for a wake word model.
+
+```kotlin
+data class WakeWordModel(
+    val name: String,
+    val modelPath: String,
+    val threshold: Float = 0.5f
+)
+```
+
+### WakeWordDetection
+
+Detection event data.
+
+```kotlin
+data class WakeWordDetection(
+    val model: WakeWordModel,
+    val score: Float,
+    val timestamp: Long = System.currentTimeMillis()
+)
+```
 
 ## Building from Source
 
-~~~bash
-git clone https://github.com/your‑org/openwakeword-android-kt
-./gradlew :sample:installDebug
-~~~
+```bash
+# Clone the repository
+git clone https://github.com/rementia/openwakeword-android-kt.git
+cd openwakeword-android-kt
 
-Run the `sample` app on an Android 6.0+ device; say *“hey nugget”* to see a Toast.
+# Build the project
+./gradlew build
 
----
+# Run tests
+./gradlew test
 
-## Training New Wake‑Words
+# Build and install sample app
+./gradlew :app:installDebug
+```
 
-Use the [OpenWakeWord](https://github.com/dscripka/openWakeWord) Python toolkit to create a custom `.onnx` classifier, then drop it into your app’s `assets/` folder and register via `addModel()`.
+## Sample App
 
----
+<p align="center">
+  <img src="docs/refs/sample_app_1.png" width="250" alt="Sample App Screenshot 1" />
+  <img src="docs/refs/sample_app_2.png" width="250" alt="Sample App Screenshot 2" />
+</p>
 
-## License & Credits
+## License
 
-* **Apache License 2.0** – see [`LICENSE`](LICENSE).  
-* Portions adapted from the original Java POC by @hasanatlodhi in **[OpenwakewordforAndroid](https://github.com/hasanatlodhi/OpenwakewordforAndroid)** (Apache‑2.0).  
-* Powered by [ONNX Runtime](https://onnxruntime.ai) and the Open Wake Word research project.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
----
+```
+Copyright 2024 Rementia
 
-> Give the repo a ⭐ if you like it—PRs & issues welcome!
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
+
+This project includes code derived from [OpenWakeWord for Android](https://github.com/hasanatlodhi/OpenwakewordforAndroid) by hasanatlodhi, also licensed under Apache License 2.0.
+
+## Acknowledgments
+
+This library is based on and inspired by [OpenWakeWord for Android](https://github.com/hasanatlodhi/OpenwakewordforAndroid) by hasanatlodhi, licensed under Apache License 2.0. We've ported the Java implementation to Kotlin and restructured it as a reusable library with a modern Flow-based API.
+
+### Model Attribution
+
+This project uses models from the [OpenWakeWord](https://github.com/dscripka/openWakeWord) project by David Scripka:
+- `melspectrogram.onnx` - Audio preprocessing model (Apache 2.0 License)
+- `embedding_model.onnx` - Speech embedding model (Apache 2.0 License, originally from Google)
+
+The embedding model is based on Google's speech embedding model released under Apache 2.0 License.
+
+### Training Custom Wake Words
+
+To train your own wake word models:
+1. Use the official OpenWakeWord training repository: [openWakeWord](https://github.com/dscripka/openWakeWord)
+2. Follow the training notebook: [Google Colab Training Guide](https://colab.research.google.com/drive/1q1oe2zOyZp7UsB3jJiQ1IFn8z5YfjwEb?usp=sharing)
+3. Export your trained model as ONNX format
+4. Place the `.onnx` file in your app's `assets` directory
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
