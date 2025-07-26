@@ -30,19 +30,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
-import com.rementia.openwakeword.lib.WakeWordEngine
+import com.rementia.openwakeword.lib.ParallelWakeWordEngine
 import com.rementia.openwakeword.lib.model.WakeWordModel
 import com.rementia.openwakeword.lib.model.DetectionMode
 import com.rementia.openwakeword.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import android.util.Log
 
 /**
  * Modern wake word detection demo with sleek black UI design.
  */
 class MainActivity : ComponentActivity() {
     
-    private var wakeWordEngine: WakeWordEngine? = null
+    private var wakeWordEngine: ParallelWakeWordEngine? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,7 +72,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun WakeWordDetectionScreen(
-    onEngineReady: (WakeWordEngine) -> Unit
+    onEngineReady: (ParallelWakeWordEngine) -> Unit
 ) {
     val context = LocalContext.current
     
@@ -106,43 +107,77 @@ fun WakeWordDetectionScreen(
     LaunchedEffect(hasPermission) {
         if (hasPermission) {
             val models = listOf(
+                // oo系
                 WakeWordModel(
-                    name = "Hello World",
-                    modelPath = "hello_world.onnx",
-                    threshold = 0.03f
+                    name = "Ooowu Iiieeee",
+                    modelPath = "ooowu_iiieeee.onnx",
+                    threshold = 0.001f
                 ),
                 WakeWordModel(
-                    name = "Multiple Words",
-                    modelPath = "multiple_words.onnx",
-                    threshold = 0.03f
+                    name = "Ohhhwhoie",
+                    modelPath = "ohhhwhoie.onnx",
+                    threshold = 0.001f
+                ),
+                WakeWordModel(
+                    name = "Oye",
+                    modelPath = "oye.onnx",
+                    threshold = 0.001f
+                ),
+                // tomori系
+                WakeWordModel(
+                    name = "Toaoh Moaoh Ree",
+                    modelPath = "toaoh_Moaoh_Ree.onnx",
+                    threshold = 0.00095f
+                ),
+                WakeWordModel(
+                    name = "toe_mow_reee",
+                    modelPath = "toe_mow_reee.onnx",
+                    threshold = 0.00095f
+                ),
+                WakeWordModel(
+                    name = "To Mo Re",
+                    modelPath = "to_mo_re.onnx",
+                    threshold = 0.00095f
                 )
             )
             
-            val engine = WakeWordEngine(
+            val engine = ParallelWakeWordEngine(
                 context = context,
                 models = models,
-                detectionMode = DetectionMode.SINGLE_BEST,
-                detectionCooldownMs = 5000L
+                detectionMode = DetectionMode.ALL,
+                detectionCooldownMs = 2000L
             )
             
             onEngineReady(engine)
             
+            // Start collecting detections first
             launch {
-                engine.detections.collect { detection ->
-                    currentScore = detection.score
-                    isDetected = true
-                    
-                    Toast.makeText(
-                        context,
-                        "${detection.model.name} detected! (${String.format("%.2f", detection.score)})",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    
-                    delay(2000)
-                    isDetected = false
+                try {
+                    Log.d("MainActivity", "Starting detection collection...")
+                    engine.detections.collect { detection ->
+                        Log.d("MainActivity", "Detection received: ${detection.model.name} - Score: ${detection.score}")
+                        currentScore = detection.score
+                        isDetected = true
+                        
+                        // Run Toast on main thread
+                        launch(kotlinx.coroutines.Dispatchers.Main) {
+                            Toast.makeText(
+                                context,
+                                "${detection.model.name} detected! (${String.format("%.2f", detection.score)})",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        
+                        delay(2000)
+                        isDetected = false
+                    }
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error collecting detections", e)
                 }
             }
             
+            // Then start engine
+            delay(100) // Small delay to ensure collector is ready
             engine.start()
             isListening = true
             status = "Listening..."
@@ -351,16 +386,16 @@ fun WakeWordHint() {
             Spacer(modifier = Modifier.height(4.dp))
             
             Text(
-                text = "\"Hello World\" or \"Multiple Words\"",
+                text = "oo系 or tomori系",
                 style = MaterialTheme.typography.headlineMedium,
                 color = AccentGreen,
                 fontWeight = FontWeight.Bold
             )
             
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = "to trigger detection (SINGLE_BEST mode)",
+                text = "6 models active (ALL mode)",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextDim
             )
