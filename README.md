@@ -25,6 +25,12 @@ dependencies {
 }
 ```
 
+Import the engines:
+```kotlin
+import com.rementia.openwakeword.lib.WakeWordEngine
+import com.rementia.openwakeword.lib.ParallelWakeWordEngine
+```
+
 ## Usage
 
 ### Basic Example
@@ -36,11 +42,20 @@ val models = listOf(
     WakeWordModel("Hey Assistant", "hey_assistant.onnx", threshold = 0.08f)
 )
 
-// 2. Create engine
+// 2. Create engine (choose based on your needs)
+// Option A: Standard engine - good for 1-2 models
 val engine = WakeWordEngine(
     context = context,
     models = models,
     detectionMode = DetectionMode.SINGLE_BEST
+)
+
+// Option B: Parallel engine - optimal for 3+ models or low-latency requirements
+val parallelEngine = ParallelWakeWordEngine(
+    context = context,
+    models = models,
+    detectionMode = DetectionMode.ALL,
+    maxWorkers = 8  // Adjust based on device capabilities
 )
 
 // 3. Start detection
@@ -67,21 +82,46 @@ override fun onDestroy() {
 val models = listOf(
     WakeWordModel("Computer", "computer.onnx", 0.1f),
     WakeWordModel("Assistant", "assistant.onnx", 0.08f),
-    WakeWordModel("Robot", "robot.onnx", 0.15f)
+    WakeWordModel("Robot", "robot.onnx", 0.15f),
+    WakeWordModel("Jarvis", "jarvis.onnx", 0.12f),
+    WakeWordModel("Alexa", "alexa.onnx", 0.09f)
 )
 
-// SINGLE_BEST mode - only the most confident detection
-val singleEngine = WakeWordEngine(
+// For 3+ models, use ParallelWakeWordEngine for optimal performance
+val parallelEngine = ParallelWakeWordEngine(
     context = context,
     models = models,
-    detectionMode = DetectionMode.SINGLE_BEST
+    detectionMode = DetectionMode.ALL,
+    maxWorkers = models.size * 2  // Allow parallel processing
 )
 
-// ALL mode - all detections above threshold
-val multiEngine = WakeWordEngine(
+// Handle detections with proper SharedFlow collection
+lifecycleScope.launch {
+    parallelEngine.detections
+        .onEach { detection ->
+            Log.d("WakeWord", "${detection.model.name}: ${detection.score}")
+        }
+        .catch { e ->
+            Log.e("WakeWord", "Error collecting detections", e)
+        }
+        .collect()
+}
+```
+
+### Performance Optimization
+
+```kotlin
+// For memory-constrained devices
+<application
+    android:largeHeap="true"
+    ...>
+
+// Optimize for many models
+val engine = ParallelWakeWordEngine(
     context = context,
     models = models,
-    detectionMode = DetectionMode.ALL
+    maxWorkers = 12,  // Increase for more parallelism
+    detectionCooldownMs = 1000L  // Reduce for faster re-detection
 )
 ```
 
@@ -97,9 +137,16 @@ app/src/main/assets/
 
 ## API Reference
 
+### Choosing the Right Engine
+
+| Engine | Best For | Characteristics |
+|--------|----------|----------------|
+| **WakeWordEngine** | • 1-2 models<br>• Simple use cases<br>• Lower memory devices | • Sequential processing<br>• Lower CPU usage<br>• Stable latency |
+| **ParallelWakeWordEngine** | • 3+ models<br>• Low-latency requirements<br>• High-performance devices | • Parallel processing<br>• Non-blocking architecture<br>• Optimal multi-model performance |
+
 ### WakeWordEngine
 
-The main entry point for wake word detection.
+The standard wake word detection engine with sequential processing.
 
 ```kotlin
 class WakeWordEngine(
@@ -111,12 +158,34 @@ class WakeWordEngine(
 )
 ```
 
+### ParallelWakeWordEngine
+
+High-performance engine with fully parallel, non-blocking processing.
+
+```kotlin
+class ParallelWakeWordEngine(
+    context: Context,
+    models: List<WakeWordModel>,
+    detectionMode: DetectionMode = DetectionMode.SINGLE_BEST,
+    detectionCooldownMs: Long = 2000L,
+    maxWorkers: Int = 8,  // Maximum concurrent workers
+    scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+)
+```
+
+**Key Features:**
+- **Non-blocking**: Audio processing never blocks inference
+- **True parallelism**: Each model runs independently
+- **Worker pool**: Prevents resource exhaustion with `maxWorkers`
+- **Ring buffer**: Efficient audio data management
+- **Fine-grained sliding**: 50ms windows for better temporal resolution
+
 **Properties:**
 - `detections: Flow<WakeWordDetection>` - Flow of detection events
 
 **Methods:**
 - `start()` - Start wake word detection
-- `stop()` - Stop wake word detection
+- `stop()` - Stop wake word detection  
 - `release()` - Release all resources
 
 ### WakeWordModel

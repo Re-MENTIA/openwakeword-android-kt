@@ -362,6 +362,39 @@ wakeWordEngine.detections.collect { detection ->
 }
 ```
 
+#### 5. **Using ParallelWakeWordEngine for Multiple Models**
+```kotlin
+// When you have 3+ models, use ParallelWakeWordEngine
+val models = listOf(
+    WakeWordModel("Jarvis", "jarvis.onnx", 0.08f),
+    WakeWordModel("Computer", "computer.onnx", 0.1f),
+    WakeWordModel("Assistant", "assistant.onnx", 0.09f),
+    WakeWordModel("Robot", "robot.onnx", 0.12f),
+    WakeWordModel("Helper", "helper.onnx", 0.11f)
+)
+
+// ParallelWakeWordEngine prevents latency buildup
+val parallelEngine = ParallelWakeWordEngine(
+    context = context,
+    models = models,
+    detectionMode = DetectionMode.ALL,
+    maxWorkers = 10  // Increase for more parallelism
+)
+
+// Enable debug logging during development
+companion object {
+    private const val IS_DEBUG = BuildConfig.DEBUG
+}
+
+// Collection remains the same
+lifecycleScope.launch {
+    parallelEngine.detections.collect { detection ->
+        // Non-blocking processing ensures consistent latency
+        handleWakeWord(detection)
+    }
+}
+```
+
 ## API Reference
 
 ### WakeWordEngine
