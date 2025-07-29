@@ -111,8 +111,8 @@ fun WakeWordDetectionScreen(
         if (hasPermission) {
             val models = listOf(
                 WakeWordModel(
-                    name = "Tomori",
-                    modelPath = "tomori.onnx",
+                    name = "Hello World",
+                    modelPath = "hello_world.onnx",
                     threshold = threshold
                 )
             )
@@ -466,7 +466,7 @@ fun WakeWordHint() {
             Spacer(modifier = Modifier.height(4.dp))
             
             Text(
-                text = "\"Tomori\"",
+                text = "\"Hello World\"",
                 style = MaterialTheme.typography.headlineMedium,
                 color = AccentGreen,
                 fontWeight = FontWeight.Bold
