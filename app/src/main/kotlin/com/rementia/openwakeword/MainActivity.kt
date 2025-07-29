@@ -22,6 +22,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Mic
@@ -80,6 +82,8 @@ fun WakeWordDetectionScreen(
     var currentScore by remember { mutableStateOf(0f) }
     var isDetected by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Initializing...") }
+    var realtimeScore by remember { mutableStateOf(0f) }
+    var threshold by remember { mutableStateOf(0.03f) }
     
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -109,12 +113,7 @@ fun WakeWordDetectionScreen(
                 WakeWordModel(
                     name = "Hello World",
                     modelPath = "hello_world.onnx",
-                    threshold = 0.03f
-                ),
-                WakeWordModel(
-                    name = "Multiple Words",
-                    modelPath = "multiple_words.onnx",
-                    threshold = 0.03f
+                    threshold = threshold
                 )
             )
             
@@ -140,6 +139,12 @@ fun WakeWordDetectionScreen(
                     
                     delay(2000)
                     isDetected = false
+                }
+            }
+            
+            launch {
+                engine.scores.collect { score ->
+                    realtimeScore = score.score
                 }
             }
             
@@ -169,6 +174,11 @@ fun WakeWordDetectionScreen(
             DetectionVisualization(
                 isListening = isListening,
                 isDetected = isDetected
+            )
+            
+            RealtimeScoreDisplay(
+                score = realtimeScore,
+                threshold = threshold
             )
             
             StatusSection(
@@ -326,6 +336,111 @@ fun StatusSection(
 }
 
 @Composable
+fun RealtimeScoreDisplay(
+    score: Float,
+    threshold: Float
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = SurfaceDark
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Real-time Inference",
+                style = MaterialTheme.typography.titleMedium,
+                color = TextSecondary,
+                fontWeight = FontWeight.Medium
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Score display
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Score",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextDim
+                    )
+                    Text(
+                        text = String.format("%.5f", score),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = if (score > threshold) AccentGreen else TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Threshold",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextDim
+                    )
+                    Text(
+                        text = String.format("%.5f", threshold),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = TextSecondary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Progress bar
+            var barWidth by remember { mutableStateOf(0.dp) }
+            val density = LocalDensity.current
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(MediumGray)
+                    .onSizeChanged { size ->
+                        with(density) {
+                            barWidth = size.width.toDp()
+                        }
+                    }
+            ) {
+                val progress = (score / 0.1f).coerceIn(0f, 1f)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progress)
+                        .fillMaxHeight()
+                        .background(
+                            if (score > threshold) AccentGreen else TextSecondary
+                        )
+                )
+                
+                // Threshold indicator
+                val thresholdPosition = (threshold / 0.1f).coerceIn(0f, 1f)
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(2.dp)
+                        .offset(x = barWidth * thresholdPosition)
+                        .background(Color.White)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun WakeWordHint() {
     Card(
         modifier = Modifier
@@ -351,7 +466,7 @@ fun WakeWordHint() {
             Spacer(modifier = Modifier.height(4.dp))
             
             Text(
-                text = "\"Hello World\" or \"Multiple Words\"",
+                text = "\"Hello World\"",
                 style = MaterialTheme.typography.headlineMedium,
                 color = AccentGreen,
                 fontWeight = FontWeight.Bold

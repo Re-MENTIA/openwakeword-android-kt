@@ -1,6 +1,7 @@
 package com.rementia.openwakeword.lib.audio
 
 import android.content.res.AssetManager
+import android.util.Log
 import com.rementia.openwakeword.lib.ml.EmbeddingModel
 import com.rementia.openwakeword.lib.ml.MelSpectrogram
 import com.rementia.openwakeword.lib.ml.OnnxModelRunner
@@ -17,6 +18,7 @@ internal class AudioProcessor(
 ) : AutoCloseable {
     
     companion object {
+        private const val TAG = "AudioProcessor"
         private const val N_PREPARED_SAMPLES = 1280
         private const val SAMPLE_RATE = 16000
         private const val MEL_SPECTROGRAM_MAX_LEN = 10 * 97
@@ -50,7 +52,9 @@ internal class AudioProcessor(
     fun predictWakeWord(audioBuffer: FloatArray): Float {
         streamingFeatures(audioBuffer)
         val features = getFeatures(16, -1)
-        return modelRunner.predictWakeWord(features)
+        val score = modelRunner.predictWakeWord(features)
+        Log.d(TAG, "Wake word prediction score: ${String.format("%.5f", score)}")
+        return score
     }
     
     private fun streamingFeatures(audioBuffer: FloatArray): Int {

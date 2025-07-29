@@ -2,11 +2,13 @@ package com.rementia.openwakeword.lib
 
 import android.content.Context
 import android.content.res.AssetManager
+import android.util.Log
 import com.rementia.openwakeword.lib.audio.AudioProcessor
 import com.rementia.openwakeword.lib.audio.AudioRecorder
 import com.rementia.openwakeword.lib.ml.OnnxModelRunner
 import com.rementia.openwakeword.lib.model.WakeWordDetection
 import com.rementia.openwakeword.lib.model.WakeWordModel
+import com.rementia.openwakeword.lib.model.WakeWordScore
 import com.rementia.openwakeword.lib.model.DetectionMode
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -77,12 +79,17 @@ class WakeWordEngine(
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
     
+    companion object {
+        private const val TAG = "WakeWordEngine"
+    }
+    
     private val assetManager: AssetManager = context.assets
     private val audioRecorder = AudioRecorder(context)
     private val modelProcessors = mutableMapOf<WakeWordModel, ModelProcessor>()
     private val detectionCooldowns = mutableMapOf<String, Long>()
     
     private val _detections = MutableSharedFlow<WakeWordDetection>()
+    private val _scores = MutableSharedFlow<WakeWordScore>()
     
     /**
      * Flow of wake word detection events.
@@ -116,6 +123,15 @@ class WakeWordEngine(
      * ```
      */
     val detections: Flow<WakeWordDetection> = _detections.asSharedFlow()
+    
+    /**
+     * Flow of real-time wake word scores.
+     * 
+     * This Flow emits [WakeWordScore] objects continuously for all models,
+     * regardless of whether they exceed the detection threshold.
+     * Useful for real-time monitoring and visualization.
+     */
+    val scores: Flow<WakeWordScore> = _scores.asSharedFlow()
     
     private var recordingJob: Job? = null
     
@@ -173,7 +189,13 @@ class WakeWordEngine(
                             try {
                                 val processor = modelProcessors[model]!!
                                 val score = processor.process(audioBuffer)
+                                Log.d(TAG, "${model.name} - Score: ${String.format("%.5f", score)}, Threshold: ${String.format("%.5f", model.threshold)}")
+                                
+                                // Emit real-time score
+                                _scores.emit(WakeWordScore(model, score))
+                                
                                 if (score > model.threshold) {
+                                    Log.d(TAG, "DETECTION! ${model.name} - Score: ${String.format("%.5f", score)} > Threshold: ${String.format("%.5f", model.threshold)}")
                                     DetectionResult(
                                         model = model,
                                         score = score,
@@ -184,6 +206,7 @@ class WakeWordEngine(
                                     null
                                 }
                             } catch (e: Exception) {
+                                Log.e(TAG, "Error processing model ${model.name}", e)
                                 e.printStackTrace()
                                 null
                             }
@@ -226,6 +249,7 @@ class WakeWordEngine(
         val lastDetection = detectionCooldowns[model.name]
         
         if (lastDetection == null || detectionCooldownMs == 0L || now - lastDetection >= detectionCooldownMs) {
+            Log.d(TAG, "Emitting detection for ${model.name} with score ${String.format("%.5f", score)}")
             _detections.emit(
                 WakeWordDetection(
                     model = model,
@@ -233,6 +257,8 @@ class WakeWordEngine(
                 )
             )
             detectionCooldowns[model.name] = now
+        } else {
+            Log.d(TAG, "Detection skipped due to cooldown: ${model.name}")
         }
     }
     

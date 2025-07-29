@@ -4,6 +4,7 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.res.AssetManager
+import android.util.Log
 import java.io.IOException
 import java.nio.FloatBuffer
 
@@ -19,6 +20,7 @@ internal class OnnxModelRunner(
     private val session: OrtSession = createSession()
     
     companion object {
+        private const val TAG = "OnnxModelRunner"
         private const val BATCH_SIZE = 1
     }
     
@@ -47,7 +49,9 @@ internal class OnnxModelRunner(
             
             session.run(mapOf(session.inputNames.first() to inputTensor)).use { outputs ->
                 val result = outputs[0].value as Array<FloatArray>
-                result[0][0]
+                val score = result[0][0]
+                Log.d(TAG, "Model: $modelPath - Raw inference output: ${String.format("%.5f", score)}")
+                score
             }
         } catch (e: Exception) {
             throw RuntimeException("Failed to run inference", e)
